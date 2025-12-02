@@ -1,141 +1,315 @@
-Sistema de Reservas de Mudanzas – Aplicación Web en Django
+Este proyecto implementa un **sistema de gestión de reservas de mudanzas** usando el framework **Django**, con integración completa a base de datos mediante su ORM, modelos independientes y relacionados, operaciones CRUD y el uso de aplicaciones preinstaladas como `admin`, `auth`, `sessions` y `staticfiles`.
 
-Este proyecto consiste en una aplicación web desarrollada con el framework Django, cuyo propósito es administrar reservas de servicios de mudanza. Incluye gestión de clientes, registro de reservas, autenticación de usuarios, uso del panel de administración y una interfaz web personalizada para el acceso y visualización de la información.
+---
 
-Tecnologías utilizadas
+# 🚀 1. Integración de Django con Bases de Datos
 
-Python 3
+## ✅ ORM: la base de la integración  
+Django utiliza un **ORM (Object-Relational Mapping)** que permite trabajar con tablas como si fueran **clases y objetos**, sin escribir SQL.
 
-Django 5
+```python
+producto = Producto.objects.create(nombre="Caja", precio=10)
+productos = Producto.objects.filter(precio__gte=20)
+```
 
-HTML5 y CSS3
+Django convierte estas operaciones en SQL automáticamente.
 
-Django Templates
+---
 
-Django ORM
+## ✅ Compatibilidad con múltiples motores
 
-Sistema de autenticación de Django
+| Motor           | Soportado | Requisitos                 |
+|-----------------|-----------|----------------------------|
+| SQLite          | ✔         | Por defecto                |
+| PostgreSQL      | ✔         | `psycopg2`                 |
+| MySQL/MariaDB   | ✔         | `pymysql` o `mysqlclient`  |
+| Oracle          | ✔         | Cliente oficial Oracle     |
 
-Base de datos SQLite (configurable a MySQL u otros motores)
+Puedes cambiar de motor editando solo `settings.py`, **sin modificar el código del proyecto**.
 
-Funcionalidades principales
-Gestión de reservas
+---
 
-Registro de reservas a través de un formulario basado en modelos.
+## 📌 Ejemplos de configuración en `settings.py`
 
-Visualización del listado de reservas existentes.
+### **SQLite (por defecto)**
+```python
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+```
 
-Asociación directa entre clientes y reservas mediante clave foránea.
+### **PostgreSQL**
+```python
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'mi_base',
+        'USER': 'postgres',
+        'PASSWORD': '1234',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
+```
 
-Autenticación y control de acceso
+### **MySQL**
+```python
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'mi_base',
+        'USER': 'root',
+        'PASSWORD': '1234',
+        'HOST': 'localhost',
+        'PORT': '3306',
+    }
+}
+```
 
-Inicio y cierre de sesión utilizando el sistema de autenticación integrado de Django.
+---
 
-Restricción de acceso a las vistas principales mediante decoradores de autorización.
+## 🔌 Manejo automático de conexiones
 
-Redirección automática según el estado de autenticación del usuario.
+Django administra las conexiones de forma transparente:
 
-Panel de administración
+- Abre conexiones cuando se necesitan  
+- Reutiliza conexiones (connection pooling)  
+- Cierra conexiones inactivas  
+- Permite ejecutar SQL manual si es necesario  
 
-Administración de clientes, reservas y usuarios desde el módulo de administración de Django.
+```python
+from django.db import connection
 
-Incorporación de buscadores, filtros y ordenamiento para facilitar la gestión de datos.
+with connection.cursor() as cursor:
+    cursor.execute("SELECT * FROM reservas_reserva")
+    rows = cursor.fetchall()
+```
 
-Configuración de permisos por usuario y por grupo.
+---
 
-Interfaz de usuario
+# 🧱 2. Modelo *Producto* como entidad independiente
 
-Pantalla de inicio de sesión personalizada.
+En la app **reservas**, se implementó el modelo **Producto** como una entidad **simple**, sin relaciones.  
+Incluye campos como:
 
-Plantilla base para unificar el diseño de las vistas.
+- `nombre`  
+- `precio`  
+- `stock`  
 
-Archivos estáticos organizados para aplicar estilos globales.
+Se crearon sus tablas usando:
 
-
-Instalación y ejecución
-1. Creación del entorno virtual
-python3 -m venv venv
-
-
-Activación:
-
-Mac/Linux:
-
-source venv/bin/activate
-
-
-Windows:
-
-venv\Scripts\activate
-
-2. Instalación de dependencias
-pip install django
-
-3. Migración inicial de la base de datos
+```bash
+python manage.py makemigrations reservas
 python manage.py migrate
+```
 
-4. Creación del usuario administrador
-python manage.py createsuperuser
+A partir del modelo se implementaron **operaciones CRUD** completas.
 
-5. Ejecución del servidor de desarrollo
+---
+
+# 🔄 4. Migraciones en Django
+
+Cada vez que se modificó un modelo (como `Producto` y `Reserva`), se aplicaron migraciones:
+
+```bash
+python manage.py makemigrations reservas
+python manage.py migrate
+```
+
+Las migraciones generan archivos que Django convierte en SQL para actualizar la base de datos.
+
+---
+
+# 🔍 5. Recuperación de información con el ORM
+
+Se usaron métodos como `filter()`, `exclude()`, `get()`, `annotate()` y consultas SQL si fue necesario.
+
+Ejemplo: reservas de un cliente en un rango de fechas:
+
+```python
+Reserva.objects.filter(
+    cliente=cliente,
+    fecha_mudanza__range=(inicio, fin)
+)
+```
+
+Ejemplo con `annotate`:
+
+```python
+from django.db.models import Count
+Cliente.objects.annotate(
+    total_reservas=Count('reserva')
+)
+```
+
+---
+
+# ⚙️ 7. Uso de aplicaciones preinstaladas de Django
+
+El proyecto usa varias apps del núcleo de Django:
+
+### ✔ `django.contrib.admin`
+- Gestión de Cliente, Reserva y Producto  
+- Columnas personalizadas  
+- Filtros y buscadores  
+- Funcionalidad similar a un sistema real
+
+### ✔ `django.contrib.auth`
+- Autenticación de usuarios  
+- Protege vistas con `@login_required`  
+- Rutas `/accounts/login/` y `/accounts/logout/`
+
+### ✔ `django.contrib.sessions`
+- Manejo automático de sesiones
+
+### ✔ `django.contrib.messages`
+- Mensajes de confirmación y error
+
+### ✔ `django.contrib.staticfiles`
+- Manejo de archivos estáticos (ej: `estilos.css`)
+
+---
+
+# 🏗️ Sistema de Reservas de Mudanzas — Configuración del Proyecto
+
+## 📥 1. Clonar el repositorio
+
+```bash
+git clone <URL_DEL_REPOSITORIO>
+cd mudanza_django
+```
+
+---
+
+## 🧰 2. Crear entorno virtual
+
+```bash
+python -m venv venv
+```
+
+Activarlo:
+
+**Linux/MacOS**
+```bash
+source venv/bin/activate
+```
+
+**Windows**
+```bash
+venv\Scripts\activate
+```
+
+---
+
+## 📦 3. Instalar dependencias
+
+```bash
+pip install django
+```
+
+MySQL:
+```bash
+pip install pymysql
+```
+
+PostgreSQL:
+```bash
+pip install psycopg2-binary
+```
+
+python manage.py collectstatic
+---
+
+# 🗄️ 4. Configuración de base de datos
+
+Se realiza en:
+
+```
+mudanza_site/settings.py
+```
+
+Ejemplos arriba 👆
+
+---
+
+# 🧱 5. Migraciones
+
+Crear migraciones:
+
+```bash
+python manage.py makemigrations
+```
+
+Aplicarlas:
+
+```bash
+python manage.py migrate
+```
+
+---
+
+# ▶️ 6. Ejecutar el servidor
+
+```bash
 python manage.py runserver
+```
 
-6. Acceso a secciones principales
-Función	URL
-Inicio de sesión	http://127.0.0.1:8000/accounts/login/
+Acceder:
 
-Listado de reservas	http://127.0.0.1:8000/reservas/
+- Login → http://127.0.0.1:8000/accounts/login/  
+- Reservas → http://127.0.0.1:8000/reservas/  
+- Admin → http://127.0.0.1:8000/admin/ *(admin/admin)*
 
-Registro de nueva reserva	http://127.0.0.1:8000/reservas/nueva/
+---
 
-Panel de administración	http://127.0.0.1:8000/admin/
-Modelos implementados
-Cliente
+# 🧩 7. Modelos y relaciones
 
-Nombre
+### ✔ Modelo independiente
+`Producto` → sin relaciones directas
 
-Correo electrónico
+### ✔ Modelos relacionados
 
-Teléfono
+- **Cliente — Reserva** → relación *1 a muchos*
+- **Reserva — Producto** → *muchos a muchos* si se extiende
 
-Reserva
+Implementado con:
 
-Cliente asociado
+- `ForeignKey`
+- `ManyToManyField`
+- `OneToOneField` (si fuera necesario)
 
-Fecha de mudanza
+---
 
-Hora de mudanza
+# 📝 8. CRUD implementado
 
-Dirección de origen
+CRUD completo para:
 
-Dirección de destino
+✔ Clientes  
+✔ Reservas  
+✔ Productos  
 
-Tipo de servicio
+Cada operación usa ORM + formularios + templates.
 
-Observaciones
+---
 
-Las reservas mantienen una relación uno-a-muchos con los clientes.
+# 🔎 9. Consultas avanzadas
 
-Seguridad y permisos
+Ejemplos:
 
-Las vistas relacionadas con la gestión de reservas requieren inicio de sesión.
+```python
+reservas = Reserva.objects.filter(cliente__nombre="Juan")
+productos_caros = Producto.objects.filter(precio__gt=50000)
+```
 
-Se utiliza el sistema de permisos estándar de Django.
+---
 
-El panel de administración permite gestionar usuarios, grupos y niveles de acceso.
+# 🧩 10. SQL personalizado
 
-El diseño del flujo asegura que solo usuarios autenticados puedan registrar o visualizar reservas.
+```python
+Reserva.objects.raw("SELECT * FROM reservas_reserva WHERE precio > 10000")
+```
 
-Interfaz y diseño
-
-La pantalla de inicio de sesión cuenta con una plantilla personalizada.
-
-Se utiliza una plantilla base para las vistas internas del sistema.
-
-Los estilos se gestionan mediante archivos estáticos almacenados en la carpeta correspondiente.
-
-La interfaz presenta una estructura organizada y coherente con un diseño moderno.
-
-Conclusiones
-
-El sistema de reservas desarrollado implementa los componentes fundamentales del framework Django, incluyendo modelos, vistas, formularios, autenticación, administración y manejo de archivos estáticos. Su estructura es adecuada para aplicaciones empresariales de baja y media complejidad, y constituye una base sólida para futuras extensiones, tales como edición y eliminación de reservas, integración con otros motores de base de datos o ampliación de funcionalidades de cliente.
+---
